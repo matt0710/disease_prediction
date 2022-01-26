@@ -50,23 +50,24 @@ def preprocess_data(file, spark):
 
     return df_4, names
 
-# def logistic_regression_model(stringIndexer, assembler, features_scaler, featureIndexer, trainingData, testData, evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")):
-#
-#      lr = LogisticRegression(featuresCol='indexedFeatures', labelCol='label')
-#
-#      paramGrid = ParamGridBuilder().addGrid(lr.elasticNetParam, [0.1, 0.3, 0.5, 0.8]) \
-#          .addGrid(lr.maxIter, [100, 200, 500, 1000]) \
-#          .addGrid(lr.regParam, [0.1, 0.3, 0.5, 0.8]).build()
-#
-#      pipeline = Pipeline(stages=[stringIndexer, assembler, features_scaler, featureIndexer, lr])
-#
-#      tvs = TrainValidationSplit(estimator=pipeline, estimatorParamMaps=paramGrid, evaluator=evaluator, trainRatio=0.8)
-#
-#      model = tvs.fit(trainingData)
-#
-#      prediction = model.transform(testData)
-#
-#      accuracy = evaluator.evaluate(prediction)
-#
-#      return prediction, accuracy
+
+def evaluate_model(evaluator, model):
+
+    evaluator.setMetricName("accuracy")
+    accuracy = evaluator.evaluate(model)
+
+    evaluator.setMetricName("hammingLoss")
+    hammingLoss = evaluator.evaluate(model)
+
+    evaluator.setMetricName("precisionByLabel")
+    precisionByLabel = evaluator.evaluate(model)
+
+    evaluator.setMetricName("recallByLabel")
+    recallByLabel = evaluator.evaluate(model)
+
+    evaluator.setMetricName("logLoss")
+    logLoss = evaluator.evaluate(model)
+
+    return accuracy, hammingLoss, precisionByLabel, recallByLabel, logLoss
+
 

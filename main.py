@@ -7,7 +7,7 @@ from pyspark.ml.classification import LogisticRegression, NaiveBayes, Multilayer
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from utils import *
 
-spark = SparkSession.builder.appName("simpleapp").getOrCreate()
+spark = SparkSession.builder.appName("disease_prediction").getOrCreate()
 
 trainingData, names = preprocess_data("Training.csv", spark)
 testData, _ = preprocess_data("Testing.csv", spark)
@@ -37,10 +37,13 @@ model = tvs.fit(trainingData)
 lrPrediction = model.transform(testData)
 
 lrPrediction.show()
-lrAccuracy = evaluator.evaluate(lrPrediction)
-print(lrAccuracy)
 
-#_______________________________________________________________________________________________________________________
+lrAccuracy, lrHammingLoss, lrPrecision, lrRecall, lrLogLoss = evaluate_model(evaluator, lrPrediction)
+
+print("Logistic Regression's measures: \n" + "\taccuracy: " + str(lrAccuracy) + \
+      "\n\tHamming Loss: " + str(lrHammingLoss) + "\n\tPrecision By Label: " + str(lrPrecision) + \
+      "\n\tRecall By Label: " + str(lrRecall) + "\n\tLog Loss: " + str(lrLogLoss))
+#___________________________________________________________________________
 
 nb = NaiveBayes(modelType="multinomial")
 
@@ -53,10 +56,17 @@ nbTvs = TrainValidationSplit(estimator=nbPipeline, estimatorParamMaps=paramGrid,
 nbModel = nbTvs.fit(trainingData)
 nbPrediction = nbModel.transform(testData)
 nbPrediction.show()
-nbAccuracy = evaluator.evaluate(nbPrediction)
-print("Naive Bayes accuracy: ", nbAccuracy)
 
-#_______________________________________________________________________________________________________________________
+nbAccuracy, nbHammingLoss, nbPrecision, nbRecall, nbLogLoss = evaluate_model(evaluator, nbPrediction)
+
+print("Naive Bayes measures: \n" + "\taccuracy: " + str(nbAccuracy) + \
+      "\n\tHamming Loss: " + str(nbHammingLoss) + "\n\tPrecision By Label: " + str(nbPrecision) + \
+      "\n\tRecall By Label: " + str(nbRecall) + "\n\tLog Loss: " + str(nbLogLoss))
+
+#print(nbModel.getEstimatorParamMaps())#nbModel.bestModel.getEstimatorParamMaps())
+#print(nbModel.bestModel.getEstimatorParamMaps())
+
+#___________________________________________________________________
 
 
 layers = [130,50,25,41]
@@ -71,19 +81,30 @@ mlpTvs = TrainValidationSplit(estimator=mlpPipeline, estimatorParamMaps=paramGri
 mlpModel = mlpTvs.fit(trainingData)
 mlpPrediction = mlpModel.transform(testData)
 mlpPrediction.show()
-mlpAccuracy = evaluator.evaluate(mlpPrediction)
-print("MLP accuracy: ", mlpAccuracy)
 
-#_______________________________________________________________________________________________________________________
+mlpAccuracy, mlpHammingLoss, mlpPrecision, mlpRecall, mlpLogLoss = evaluate_model(evaluator, mlpPrediction)
+
+print("MLP's measures: \n" + "\taccuracy: " + str(mlpAccuracy) + \
+      "\n\tHamming Loss: " + str(mlpHammingLoss) + "\n\tPrecision By Label: " + str(mlpPrecision) + \
+      "\n\tRecall By Label: " + str(mlpRecall) + "\n\tLog Loss: " + str(mlpLogLoss))
+
+print(mlpModel.bestModel.params)
+
+#____________________________________________________________
 
 dt = DecisionTreeClassifier(labelCol="label", featuresCol="features")
 dtPipeline = Pipeline(stages=[stringIndexer, assembler, features_scaler, featureIndexer, dt])
 dt_model = dtPipeline.fit(trainingData)
 dt_predictions = dt_model.transform(testData)
 dt_predictions.show()
-dtAccuracy = evaluator.evaluate(dt_predictions)
+evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
 
-print("Decision Tree accuracy: ", dtAccuracy)
+dtAccuracy, dtHammingLoss, dtPrecision, dtRecall, dtLogLoss = evaluate_model(evaluator, dt_predictions)
+
+print("Decision Tree's measures: \n" + "\taccuracy: " + str(dtAccuracy) + \
+      "\n\tHamming Loss: " + str(dtHammingLoss) + "\n\tPrecision By Label: " + str(dtPrecision) + \
+      "\n\tRecall By Label: " + str(dtRecall) + "\n\tLog Loss: " + str(dtLogLoss))
+
 
 rt = RandomForestClassifier(labelCol="label", featuresCol="features")
 paramGrid = ParamGridBuilder().addGrid(rt.numTrees, [100, 500, 1000])\
@@ -95,5 +116,10 @@ rtTvs = TrainValidationSplit(estimator=rtPipeline, estimatorParamMaps=paramGrid,
 rtModel = rtTvs.fit(trainingData)
 rtPrediction = rtModel.transform(testData)
 rtPrediction.show()
-rtAccuracy = evaluator.evaluate(rtPrediction)
-print("RT accuracy: ", rtAccuracy)
+evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
+
+rtAccuracy, rtHammingLoss, rtPrecision, rtRecall, rtLogLoss = evaluate_model(evaluator, rtPrediction)
+
+print("Random Forest's measures: \n" + "\taccuracy: " + str(rtAccuracy) + \
+      "\n\tHamming Loss: " + str(rtHammingLoss) + "\n\tPrecision By Label: " + str(rtPrecision) + \
+      "\n\tRecall By Label: " + str(rtRecall) + "\n\tLog Loss: " + str(rtLogLoss))
