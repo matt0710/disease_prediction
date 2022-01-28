@@ -42,9 +42,12 @@ print("Logistic Regression's measures: \n" + "\taccuracy: " + str(lrAccuracy) + 
       "\n\tHamming Loss: " + str(lrHammingLoss) + "\n\tPrecision By Label: " + str(lrPrecision) + \
       "\n\tRecall By Label: " + str(lrRecall) + "\n\tLog Loss: " + str(lrLogLoss))
 
-print("\n\nBest model's parameters: \n" + "\tmax_iter: " + str(model.bestModel.stages[-1]._java_obj.getMaxIter()) + \
-      "\n\treg_param: " +  str(model.bestModel.stages[-1]._java_obj.getRegParam()) + "\n\telastic_net_param: " + \
-      str(model.bestModel.stages[-1]._java_obj.getElasticNetParam()))
+lrBestPipeline = model.bestModel
+lrBestModel = lrBestPipeline.stages[-1]
+
+print("maxIter: ", lrBestModel.getOrDefault('maxIter'))
+print("regParam: ", lrBestModel.getOrDefault('regParam'))
+print("elasticNetParam: ", lrBestModel.getOrDefault('elasticNetParam'))
 #___________________________________________________________________________
 
 nb = NaiveBayes(modelType="multinomial")
@@ -65,14 +68,20 @@ print("Naive Bayes measures: \n" + "\taccuracy: " + str(nbAccuracy) + \
       "\n\tHamming Loss: " + str(nbHammingLoss) + "\n\tPrecision By Label: " + str(nbPrecision) + \
       "\n\tRecall By Label: " + str(nbRecall) + "\n\tLog Loss: " + str(nbLogLoss))
 
-print("\n\nBest model's parameters: \n" + "\tmodel_type: " + str(nbModel.bestModel.stages[-1]._java_obj.getModelType()) + \
-      "\n\tsmoothing " + str(nbModel.bestModel.stages[-1]._java_obj.getSmoothing()))
+nbBestPipeline = nbModel.bestModel
+nbBestModel = nbBestPipeline.stages[-1]
 
-#print(nbModel.getEstimatorParamMaps())#nbModel.bestModel.getEstimatorParamMaps())
-#print(nbModel.bestModel.getEstimatorParamMaps())
-print(list(zip(nbModel.validationMetrics, nbModel.getEstimatorParamMaps())))
-for v, e in zip(nbModel.validationMetrics, nbModel.getEstimatorParamMaps()):
-    print("for model params:" + "\tmodel_type:" + str(e[1]) + "\tsmoothing: " + str(e[2]) + " the accuracy is: " + str(v))
+print("model_type: ", nbBestModel.getModelType())
+print("smoothing: ", nbBestModel.getOrDefault('smoothing'))
+
+# print("\n\nBest model's parameters: \n" + "\tmodel_type: " + str(nbModel.bestModel.stages[-1]._java_obj.getModelType()) + \
+#       "\n\tsmoothing " + str(nbModel.bestModel.stages[-1]._java_obj.getSmoothing()))
+#
+# #print(nbModel.getEstimatorParamMaps())#nbModel.bestModel.getEstimatorParamMaps())
+# #print(nbModel.bestModel.getEstimatorParamMaps())
+# print(list(zip(nbModel.validationMetrics, nbModel.getEstimatorParamMaps())))
+# for v, e in zip(nbModel.validationMetrics, nbModel.getEstimatorParamMaps()):
+#     print("for model params:" + "\tmodel_type:" + str(e[1]) + "\tsmoothing: " + str(e[2]) + " the accuracy is: " + str(v))
 
 #___________________________________________________________________
 
@@ -96,9 +105,17 @@ print("MLP's measures: \n" + "\taccuracy: " + str(mlpAccuracy) + \
       "\n\tHamming Loss: " + str(mlpHammingLoss) + "\n\tPrecision By Label: " + str(mlpPrecision) + \
       "\n\tRecall By Label: " + str(mlpRecall) + "\n\tLog Loss: " + str(mlpLogLoss))
 
-print("\n\nBest model's parameters: \n" + "\tmax_iter: " + str(nbModel.bestModel.stages[-1]._java_obj.getMaxIter()) + \
-      "\n\tblock_size: " +  str(nbModel.bestModel.stages[-1]._java_obj.getBlockSize()) + "\n\tseed: " + \
-      str(nbModel.bestModel.stages[-1]._java_obj.getSeed()))
+# print("\n\nBest model's parameters: \n" + "\tmax_iter: " + str(nbModel.bestModel.stages[-1]._java_obj.getMaxIter()) + \
+#       "\n\tblock_size: " +  str(nbModel.bestModel.stages[-1]._java_obj.getBlockSize()) + "\n\tseed: " + \
+#       str(nbModel.bestModel.stages[-1]._java_obj.getSeed()))
+
+mlpBestPipeline = mlpModel.bestModel
+mlpBestModel = mlpBestPipeline.stages[-1]
+
+print("maxIter: ", mlpBestModel.getOrDefault('maxIter'))
+print("blockSize: ", mlpBestModel.getOrDefault('blockSize'))
+print("seed: ", mlpBestModel.getOrDefault('seed'))
+
 
 #____________________________________________________________
 
@@ -133,3 +150,10 @@ rtAccuracy, rtHammingLoss, rtPrecision, rtRecall, rtLogLoss = evaluate_model(eva
 print("Random Forest's measures: \n" + "\taccuracy: " + str(rtAccuracy) + \
       "\n\tHamming Loss: " + str(rtHammingLoss) + "\n\tPrecision By Label: " + str(rtPrecision) + \
       "\n\tRecall By Label: " + str(rtRecall) + "\n\tLog Loss: " + str(rtLogLoss))
+
+rtBestPipeline = rtModel.bestModel
+rtBestModel = rtBestPipeline.stages[-1]
+
+print("numTrees: ", rtBestModel.getOrDefault('numTrees'))
+print("maxDepth: ", rtBestModel.getOrDefault('maxDepth'))
+print("seed: ", rtBestModel.getOrDefault('seed'))
