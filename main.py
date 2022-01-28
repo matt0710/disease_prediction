@@ -7,7 +7,7 @@ from pyspark.ml.classification import LogisticRegression, NaiveBayes, Multilayer
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from utils import *
 
-spark = SparkSession.builder.appName("disease_prediction").getOrCreate()
+spark = SparkSession.builder.appName("disease_detection").getOrCreate()
 
 trainingData, names = preprocess_data("Training.csv", spark)
 testData, _ = preprocess_data("Testing.csv", spark)
@@ -16,8 +16,6 @@ stringIndexer = StringIndexer(inputCol='prognosis', outputCol='label')
 assembler = VectorAssembler(inputCols=[x for x in names[:-1]], outputCol='features')
 features_scaler = MinMaxScaler(inputCol="features", outputCol="sfeatures")
 featureIndexer = VectorIndexer(inputCol="sfeatures", outputCol="indexedFeatures", maxCategories=41)
-
-#_______________________________________________________________________________________________________________________
 
 lr = LogisticRegression(featuresCol='indexedFeatures', labelCol='label')
 
@@ -43,6 +41,10 @@ lrAccuracy, lrHammingLoss, lrPrecision, lrRecall, lrLogLoss = evaluate_model(eva
 print("Logistic Regression's measures: \n" + "\taccuracy: " + str(lrAccuracy) + \
       "\n\tHamming Loss: " + str(lrHammingLoss) + "\n\tPrecision By Label: " + str(lrPrecision) + \
       "\n\tRecall By Label: " + str(lrRecall) + "\n\tLog Loss: " + str(lrLogLoss))
+
+print("\n\nBest model's parameters: \n" + "\tmax_iter: " + str(model.bestModel.stages[-1]._java_obj.getMaxIter()) + \
+      "\n\treg_param: " +  str(model.bestModel.stages[-1]._java_obj.getRegParam()) + "\n\telastic_net_param: " + \
+      str(model.bestModel.stages[-1]._java_obj.getElasticNetParam()))
 #___________________________________________________________________________
 
 nb = NaiveBayes(modelType="multinomial")
@@ -63,13 +65,19 @@ print("Naive Bayes measures: \n" + "\taccuracy: " + str(nbAccuracy) + \
       "\n\tHamming Loss: " + str(nbHammingLoss) + "\n\tPrecision By Label: " + str(nbPrecision) + \
       "\n\tRecall By Label: " + str(nbRecall) + "\n\tLog Loss: " + str(nbLogLoss))
 
+print("\n\nBest model's parameters: \n" + "\tmodel_type: " + str(nbModel.bestModel.stages[-1]._java_obj.getModelType()) + \
+      "\n\tsmoothing " + str(nbModel.bestModel.stages[-1]._java_obj.getSmoothing()))
+
 #print(nbModel.getEstimatorParamMaps())#nbModel.bestModel.getEstimatorParamMaps())
 #print(nbModel.bestModel.getEstimatorParamMaps())
+print(list(zip(nbModel.validationMetrics, nbModel.getEstimatorParamMaps())))
+for v, e in zip(nbModel.validationMetrics, nbModel.getEstimatorParamMaps()):
+    print("for model params:" + "\tmodel_type:" + str(e[1]) + "\tsmoothing: " + str(e[2]) + " the accuracy is: " + str(v))
 
 #___________________________________________________________________
 
 
-layers = [130,50,25,41]
+layers = [130, 50, 25, 41]
 
 mlp = MultilayerPerceptronClassifier(layers=layers) # maxIter=100, layers=layers, blockSize=128, seed=1234)
 paramGrid = ParamGridBuilder().addGrid(mlp.maxIter, [100, 500, 1000])\
@@ -88,7 +96,9 @@ print("MLP's measures: \n" + "\taccuracy: " + str(mlpAccuracy) + \
       "\n\tHamming Loss: " + str(mlpHammingLoss) + "\n\tPrecision By Label: " + str(mlpPrecision) + \
       "\n\tRecall By Label: " + str(mlpRecall) + "\n\tLog Loss: " + str(mlpLogLoss))
 
-print(mlpModel.bestModel.params)
+print("\n\nBest model's parameters: \n" + "\tmax_iter: " + str(nbModel.bestModel.stages[-1]._java_obj.getMaxIter()) + \
+      "\n\tblock_size: " +  str(nbModel.bestModel.stages[-1]._java_obj.getBlockSize()) + "\n\tseed: " + \
+      str(nbModel.bestModel.stages[-1]._java_obj.getSeed()))
 
 #____________________________________________________________
 
