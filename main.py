@@ -5,6 +5,11 @@ from pyspark.ml.tuning import ParamGridBuilder, TrainValidationSplit
 from pyspark.sql import SparkSession
 from pyspark.ml.classification import LogisticRegression, NaiveBayes, MultilayerPerceptronClassifier, DecisionTreeClassifier, RandomForestClassifier
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+from pyspark.ml.stat import Correlation
+import seaborn as sns
+import matplotlib.pyplot as plt
+from pyspark.sql.functions import col
+
 from utils import *
 
 spark = SparkSession.builder.appName("disease_detection").getOrCreate()
@@ -16,6 +21,27 @@ stringIndexer = StringIndexer(inputCol='prognosis', outputCol='label')
 assembler = VectorAssembler(inputCols=[x for x in names[:-1]], outputCol='features')
 features_scaler = MinMaxScaler(inputCol="features", outputCol="sfeatures")
 featureIndexer = VectorIndexer(inputCol="sfeatures", outputCol="indexedFeatures", maxCategories=41)
+
+
+pipelineAnalysis = Pipeline(stages=[stringIndexer, assembler, features_scaler, featureIndexer])
+trainingAnalysis = pipelineAnalysis.fit(trainingData).transform(trainingData)
+
+r1 = Correlation.corr(trainingAnalysis, 'indexedFeatures')#.head()
+#print("pearson correlation matrix: \n" + str(r1.collect()[0]["pearson({})".format('indexedFeatures')].values))
+
+r1_np = r1.collect()[0]["pearson({})".format('indexedFeatures')].values
+
+indexedFeatures = trainingAnalysis.select('indexedFeatures').columns
+
+#r1_np = r1_np.reshape(len(indexedFeatures), len(indexedFeatures))
+#print(indexedFeatures)
+fig, ax = plt.subplots(figsize=(12,8))
+ax = sns.heatmap(r1_np, cmap="YlGnBu")
+ax.xaxis.set_ticklabels(indexedFeatures, rotation=270)
+ax.yaxis.set_ticklabels(indexedFeatures, rotation=0)
+ax.set_title("Correlation Matrix")
+plt.tight_layout()
+plt.show()
 
 lr = LogisticRegression(featuresCol='indexedFeatures', labelCol='label')
 
@@ -74,15 +100,6 @@ nbBestModel = nbBestPipeline.stages[-1]
 print("model_type: ", nbBestModel.getModelType())
 print("smoothing: ", nbBestModel.getOrDefault('smoothing'))
 
-# print("\n\nBest model's parameters: \n" + "\tmodel_type: " + str(nbModel.bestModel.stages[-1]._java_obj.getModelType()) + \
-#       "\n\tsmoothing " + str(nbModel.bestModel.stages[-1]._java_obj.getSmoothing()))
-#
-# #print(nbModel.getEstimatorParamMaps())#nbModel.bestModel.getEstimatorParamMaps())
-# #print(nbModel.bestModel.getEstimatorParamMaps())
-# print(list(zip(nbModel.validationMetrics, nbModel.getEstimatorParamMaps())))
-# for v, e in zip(nbModel.validationMetrics, nbModel.getEstimatorParamMaps()):
-#     print("for model params:" + "\tmodel_type:" + str(e[1]) + "\tsmoothing: " + str(e[2]) + " the accuracy is: " + str(v))
-
 #___________________________________________________________________
 
 
@@ -104,10 +121,6 @@ mlpAccuracy, mlpHammingLoss, mlpPrecision, mlpRecall, mlpLogLoss = evaluate_mode
 print("MLP's measures: \n" + "\taccuracy: " + str(mlpAccuracy) + \
       "\n\tHamming Loss: " + str(mlpHammingLoss) + "\n\tPrecision By Label: " + str(mlpPrecision) + \
       "\n\tRecall By Label: " + str(mlpRecall) + "\n\tLog Loss: " + str(mlpLogLoss))
-
-# print("\n\nBest model's parameters: \n" + "\tmax_iter: " + str(nbModel.bestModel.stages[-1]._java_obj.getMaxIter()) + \
-#       "\n\tblock_size: " +  str(nbModel.bestModel.stages[-1]._java_obj.getBlockSize()) + "\n\tseed: " + \
-#       str(nbModel.bestModel.stages[-1]._java_obj.getSeed()))
 
 mlpBestPipeline = mlpModel.bestModel
 mlpBestModel = mlpBestPipeline.stages[-1]
