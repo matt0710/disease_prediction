@@ -26,22 +26,49 @@ featureIndexer = VectorIndexer(inputCol="sfeatures", outputCol="indexedFeatures"
 pipelineAnalysis = Pipeline(stages=[stringIndexer, assembler, features_scaler, featureIndexer])
 trainingAnalysis = pipelineAnalysis.fit(trainingData).transform(trainingData)
 
-r1 = Correlation.corr(trainingAnalysis, 'indexedFeatures')#.head()
-#print("pearson correlation matrix: \n" + str(r1.collect()[0]["pearson({})".format('indexedFeatures')].values))
+#_____________________________________________________________________
 
-r1_np = r1.collect()[0]["pearson({})".format('indexedFeatures')].values
+feature = names
+feature.remove('prognosis')
 
-indexedFeatures = trainingAnalysis.select('indexedFeatures').columns
+assembler = VectorAssembler(inputCols=feature, outputCol='features')
+train = assembler.transform(trainingData)
 
-#r1_np = r1_np.reshape(len(indexedFeatures), len(indexedFeatures))
-#print(indexedFeatures)
-fig, ax = plt.subplots(figsize=(12,8))
-ax = sns.heatmap(r1_np, cmap="YlGnBu")
-ax.xaxis.set_ticklabels(indexedFeatures, rotation=270)
-ax.yaxis.set_ticklabels(indexedFeatures, rotation=0)
-ax.set_title("Correlation Matrix")
+matrix = Correlation.corr(train.select('features'), 'features')
+matrix.show()
+matrix_np = matrix.collect()[0]["pearson({})".format('features')].values
+#print(matrix_np)
+
+matrix_np = matrix_np.reshape(len(feature), len(feature))
+
+fig, ax = plt.subplots(figsize=(12, 8))
+ax = sns.heatmap(matrix_np, cmap="YlGnBu")
+ax.xaxis.set_ticklabels(feature, rotation=270)
+ax.yaxis.set_ticklabels(feature, rotation=0)
+ax.set_title("Pearson Correlation Matrix")
 plt.tight_layout()
 plt.show()
+
+matrix2 = Correlation.corr(train.select('features'), 'features', method='spearman')
+matrix2.show()
+matrix_np_2 = matrix2.collect()[0]["spearman({})".format('features')].values
+
+#matrix_np = matrix.collect()[1]["pearson({})".format('features')].values
+
+matrix_np_2 = matrix_np_2.reshape(len(feature), len(feature))
+
+fig2, ax2 = plt.subplots(figsize=(12, 8))
+ax2 = sns.heatmap(matrix_np_2, cmap="YlGnBu")
+ax2.xaxis.set_ticklabels(feature, rotation=270)
+ax2.yaxis.set_ticklabels(feature, rotation=0)
+ax2.set_title("Spearman Correlation Matrix")
+plt.tight_layout()
+plt.show()
+
+print(matrix_np==matrix_np_2)
+
+#________________________________________________________
+
 
 lr = LogisticRegression(featuresCol='indexedFeatures', labelCol='label')
 
@@ -74,6 +101,9 @@ lrBestModel = lrBestPipeline.stages[-1]
 print("maxIter: ", lrBestModel.getOrDefault('maxIter'))
 print("regParam: ", lrBestModel.getOrDefault('regParam'))
 print("elasticNetParam: ", lrBestModel.getOrDefault('elasticNetParam'))
+
+print(lrBestModel.summary)
+print(lrBestModel.coefficientMatrix)
 #___________________________________________________________________________
 
 nb = NaiveBayes(modelType="multinomial")
@@ -100,6 +130,15 @@ nbBestModel = nbBestPipeline.stages[-1]
 print("model_type: ", nbBestModel.getModelType())
 print("smoothing: ", nbBestModel.getOrDefault('smoothing'))
 
+# print("\n\nBest model's parameters: \n" + "\tmodel_type: " + str(nbModel.bestModel.stages[-1]._java_obj.getModelType()) + \
+#       "\n\tsmoothing " + str(nbModel.bestModel.stages[-1]._java_obj.getSmoothing()))
+#
+# #print(nbModel.getEstimatorParamMaps())#nbModel.bestModel.getEstimatorParamMaps())
+# #print(nbModel.bestModel.getEstimatorParamMaps())
+# print(list(zip(nbModel.validationMetrics, nbModel.getEstimatorParamMaps())))
+# for v, e in zip(nbModel.validationMetrics, nbModel.getEstimatorParamMaps()):
+#     print("for model params:" + "\tmodel_type:" + str(e[1]) + "\tsmoothing: " + str(e[2]) + " the accuracy is: " + str(v))
+
 #___________________________________________________________________
 
 
@@ -121,6 +160,10 @@ mlpAccuracy, mlpHammingLoss, mlpPrecision, mlpRecall, mlpLogLoss = evaluate_mode
 print("MLP's measures: \n" + "\taccuracy: " + str(mlpAccuracy) + \
       "\n\tHamming Loss: " + str(mlpHammingLoss) + "\n\tPrecision By Label: " + str(mlpPrecision) + \
       "\n\tRecall By Label: " + str(mlpRecall) + "\n\tLog Loss: " + str(mlpLogLoss))
+
+# print("\n\nBest model's parameters: \n" + "\tmax_iter: " + str(nbModel.bestModel.stages[-1]._java_obj.getMaxIter()) + \
+#       "\n\tblock_size: " +  str(nbModel.bestModel.stages[-1]._java_obj.getBlockSize()) + "\n\tseed: " + \
+#       str(nbModel.bestModel.stages[-1]._java_obj.getSeed()))
 
 mlpBestPipeline = mlpModel.bestModel
 mlpBestModel = mlpBestPipeline.stages[-1]
