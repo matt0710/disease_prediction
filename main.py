@@ -8,6 +8,7 @@ from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.ml.stat import Correlation
 import seaborn as sns
 import matplotlib.pyplot as plt
+import pandas as pd
 from pyspark.sql.functions import col
 
 from utils import *
@@ -22,22 +23,16 @@ assembler = VectorAssembler(inputCols=[x for x in names[:-1]], outputCol='featur
 features_scaler = MinMaxScaler(inputCol="features", outputCol="sfeatures")
 featureIndexer = VectorIndexer(inputCol="sfeatures", outputCol="indexedFeatures", maxCategories=41)
 
-
-pipelineAnalysis = Pipeline(stages=[stringIndexer, assembler, features_scaler, featureIndexer])
-trainingAnalysis = pipelineAnalysis.fit(trainingData).transform(trainingData)
-
 #_____________________________________________________________________
 
 feature = names
 feature.remove('prognosis')
 
-assembler = VectorAssembler(inputCols=feature, outputCol='features')
-train = assembler.transform(trainingData)
+assembler2 = VectorAssembler(inputCols=feature, outputCol='features')
+train = assembler2.transform(trainingData)
 
 matrix = Correlation.corr(train.select('features'), 'features')
-matrix.show()
 matrix_np = matrix.collect()[0]["pearson({})".format('features')].values
-#print(matrix_np)
 
 matrix_np = matrix_np.reshape(len(feature), len(feature))
 
@@ -49,29 +44,9 @@ ax.set_title("Pearson Correlation Matrix")
 plt.tight_layout()
 plt.show()
 
-matrix2 = Correlation.corr(train.select('features'), 'features', method='spearman')
-matrix2.show()
-matrix_np_2 = matrix2.collect()[0]["spearman({})".format('features')].values
-
-#matrix_np = matrix.collect()[1]["pearson({})".format('features')].values
-
-matrix_np_2 = matrix_np_2.reshape(len(feature), len(feature))
-
-fig2, ax2 = plt.subplots(figsize=(12, 8))
-ax2 = sns.heatmap(matrix_np_2, cmap="YlGnBu")
-ax2.xaxis.set_ticklabels(feature, rotation=270)
-ax2.yaxis.set_ticklabels(feature, rotation=0)
-ax2.set_title("Spearman Correlation Matrix")
-plt.tight_layout()
-plt.show()
-
-print(matrix_np==matrix_np_2)
-
 #________________________________________________________
 
-
 lr = LogisticRegression(featuresCol='indexedFeatures', labelCol='label')
-
 
 paramGrid = ParamGridBuilder().addGrid(lr.elasticNetParam, [0.1, 0.3, 0.5, 0.8])\
     .addGrid(lr.maxIter, [100, 200, 500, 1000])\
@@ -130,26 +105,21 @@ nbBestModel = nbBestPipeline.stages[-1]
 print("model_type: ", nbBestModel.getModelType())
 print("smoothing: ", nbBestModel.getOrDefault('smoothing'))
 
-# print("\n\nBest model's parameters: \n" + "\tmodel_type: " + str(nbModel.bestModel.stages[-1]._java_obj.getModelType()) + \
-#       "\n\tsmoothing " + str(nbModel.bestModel.stages[-1]._java_obj.getSmoothing()))
-#
-# #print(nbModel.getEstimatorParamMaps())#nbModel.bestModel.getEstimatorParamMaps())
-# #print(nbModel.bestModel.getEstimatorParamMaps())
-# print(list(zip(nbModel.validationMetrics, nbModel.getEstimatorParamMaps())))
-# for v, e in zip(nbModel.validationMetrics, nbModel.getEstimatorParamMaps()):
-#     print("for model params:" + "\tmodel_type:" + str(e[1]) + "\tsmoothing: " + str(e[2]) + " the accuracy is: " + str(v))
+for item, acc in zip(nbModel.getEstimatorParamMaps(), nbModel.validationMetrics):
+    print("the smoothing is: " + str(item.values()[1]) + " while the model_type is: " + str(item.values()[0]) + " and the accuracy is: " + str(acc))
 
 #___________________________________________________________________
 
 
 layers = [130, 50, 25, 41]
 
-mlp = MultilayerPerceptronClassifier(layers=layers) # maxIter=100, layers=layers, blockSize=128, seed=1234)
+mlp = MultilayerPerceptronClassifier(layers=layers)
 paramGrid = ParamGridBuilder().addGrid(mlp.maxIter, [100, 500, 1000])\
     .addGrid(mlp.blockSize, [64, 128, 192])\
     .addGrid(mlp.seed, [1234, 5678, 2468]).build()
 
 mlpPipeline = Pipeline(stages=[stringIndexer, assembler, features_scaler, featureIndexer, mlp])
+evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
 mlpTvs = TrainValidationSplit(estimator=mlpPipeline, estimatorParamMaps=paramGrid, evaluator=evaluator, trainRatio=0.8)
 mlpModel = mlpTvs.fit(trainingData)
 mlpPrediction = mlpModel.transform(testData)
@@ -161,9 +131,6 @@ print("MLP's measures: \n" + "\taccuracy: " + str(mlpAccuracy) + \
       "\n\tHamming Loss: " + str(mlpHammingLoss) + "\n\tPrecision By Label: " + str(mlpPrecision) + \
       "\n\tRecall By Label: " + str(mlpRecall) + "\n\tLog Loss: " + str(mlpLogLoss))
 
-# print("\n\nBest model's parameters: \n" + "\tmax_iter: " + str(nbModel.bestModel.stages[-1]._java_obj.getMaxIter()) + \
-#       "\n\tblock_size: " +  str(nbModel.bestModel.stages[-1]._java_obj.getBlockSize()) + "\n\tseed: " + \
-#       str(nbModel.bestModel.stages[-1]._java_obj.getSeed()))
 
 mlpBestPipeline = mlpModel.bestModel
 mlpBestModel = mlpBestPipeline.stages[-1]
@@ -172,6 +139,9 @@ print("maxIter: ", mlpBestModel.getOrDefault('maxIter'))
 print("blockSize: ", mlpBestModel.getOrDefault('blockSize'))
 print("seed: ", mlpBestModel.getOrDefault('seed'))
 
+for item, acc in zip(mlpModel.getEstimatorParamMaps(), mlpModel.validationMetrics):
+    print("the max_iter is: " + str(item.values()[0]) + " while the block_size is: " + str(item.values()[1]) + \
+          " while the seed is: " + str(item.values()[2])  +  " and the accuracy is: " + str(acc))
 
 #____________________________________________________________
 
@@ -188,18 +158,19 @@ print("Decision Tree's measures: \n" + "\taccuracy: " + str(dtAccuracy) + \
       "\n\tHamming Loss: " + str(dtHammingLoss) + "\n\tPrecision By Label: " + str(dtPrecision) + \
       "\n\tRecall By Label: " + str(dtRecall) + "\n\tLog Loss: " + str(dtLogLoss))
 
+#__________________________________________________________________________________________________________________
 
 rt = RandomForestClassifier(labelCol="label", featuresCol="features")
 paramGrid = ParamGridBuilder().addGrid(rt.numTrees, [100, 500, 1000])\
     .addGrid(rt.maxDepth, [5, 10, 15])\
     .addGrid(rt.seed, [1234, 5678, 2468]).build()
 
+evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
 rtPipeline = Pipeline(stages=[stringIndexer, assembler, features_scaler, featureIndexer, rt])
 rtTvs = TrainValidationSplit(estimator=rtPipeline, estimatorParamMaps=paramGrid, evaluator=evaluator, trainRatio=0.8)
 rtModel = rtTvs.fit(trainingData)
 rtPrediction = rtModel.transform(testData)
 rtPrediction.show()
-evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
 
 rtAccuracy, rtHammingLoss, rtPrecision, rtRecall, rtLogLoss = evaluate_model(evaluator, rtPrediction)
 
@@ -213,3 +184,12 @@ rtBestModel = rtBestPipeline.stages[-1]
 print("numTrees: ", rtBestModel.getOrDefault('numTrees'))
 print("maxDepth: ", rtBestModel.getOrDefault('maxDepth'))
 print("seed: ", rtBestModel.getOrDefault('seed'))
+
+print(rtModel.validationMetrics)
+
+for i in rtModel.getEstimatorParamMaps():
+    print(i.values())
+
+for item, acc in zip(rtModel.getEstimatorParamMaps(), rtModel.validationMetrics):
+    print("num_trees is: " + str(item.values()[0]) + " while the max_depth is: " + str(item.values()[2]) + \
+          "and the seed is: " + str(item.values()[1]) + " and the accuracy is: " + str(acc))
