@@ -77,36 +77,47 @@ print("maxIter: ", lrBestModel.getOrDefault('maxIter'))
 print("regParam: ", lrBestModel.getOrDefault('regParam'))
 print("elasticNetParam: ", lrBestModel.getOrDefault('elasticNetParam'))
 
-print(lrBestModel.summary)
 print(lrBestModel.coefficientMatrix)
+
+lrMatrix = lrBestModel.coefficientMatrix
+
+coefficientM = []
+
+for i in range(41):
+    coeffientList = []
+    for j in range(130):
+        coeffientList.append(lrMatrix[i, j])
+    coefficientM.append(coeffientList)
+
+print(coefficientM)
 #___________________________________________________________________________
 
-nb = NaiveBayes(modelType="multinomial")
-
-paramGrid = ParamGridBuilder().addGrid(nb.modelType, ["multinomial", "gaussian", "complement"])\
-    .addGrid(nb.smoothing, [0.8, 0.9, 1]).build()
-
-nbPipeline = Pipeline(stages=[stringIndexer, assembler, features_scaler, featureIndexer, nb])
-evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
-nbTvs = TrainValidationSplit(estimator=nbPipeline, estimatorParamMaps=paramGrid, evaluator=evaluator, trainRatio=0.8)
-nbModel = nbTvs.fit(trainingData)
-nbPrediction = nbModel.transform(testData)
-nbPrediction.show()
-
-nbAccuracy, nbHammingLoss, nbPrecision, nbRecall, nbLogLoss = evaluate_model(evaluator, nbPrediction)
-
-print("Naive Bayes measures: \n" + "\taccuracy: " + str(nbAccuracy) + \
-      "\n\tHamming Loss: " + str(nbHammingLoss) + "\n\tPrecision By Label: " + str(nbPrecision) + \
-      "\n\tRecall By Label: " + str(nbRecall) + "\n\tLog Loss: " + str(nbLogLoss))
-
-nbBestPipeline = nbModel.bestModel
-nbBestModel = nbBestPipeline.stages[-1]
-
-print("model_type: ", nbBestModel.getModelType())
-print("smoothing: ", nbBestModel.getOrDefault('smoothing'))
-
-for item, acc in zip(nbModel.getEstimatorParamMaps(), nbModel.validationMetrics):
-    print("the smoothing is: " + str(item.values()[1]) + " while the model_type is: " + str(item.values()[0]) + " and the accuracy is: " + str(acc))
+# nb = NaiveBayes(modelType="multinomial")
+#
+# paramGrid = ParamGridBuilder().addGrid(nb.modelType, ["multinomial", "gaussian", "complement"])\
+#     .addGrid(nb.smoothing, [0.8, 0.9, 1]).build()
+#
+# nbPipeline = Pipeline(stages=[stringIndexer, assembler, features_scaler, featureIndexer, nb])
+# evaluator = MulticlassClassificationEvaluator(labelCol="label", predictionCol="prediction", metricName="accuracy")
+# nbTvs = TrainValidationSplit(estimator=nbPipeline, estimatorParamMaps=paramGrid, evaluator=evaluator, trainRatio=0.8)
+# nbModel = nbTvs.fit(trainingData)
+# nbPrediction = nbModel.transform(testData)
+# nbPrediction.show()
+#
+# nbAccuracy, nbHammingLoss, nbPrecision, nbRecall, nbLogLoss = evaluate_model(evaluator, nbPrediction)
+#
+# print("Naive Bayes measures: \n" + "\taccuracy: " + str(nbAccuracy) + \
+#       "\n\tHamming Loss: " + str(nbHammingLoss) + "\n\tPrecision By Label: " + str(nbPrecision) + \
+#       "\n\tRecall By Label: " + str(nbRecall) + "\n\tLog Loss: " + str(nbLogLoss))
+#
+# nbBestPipeline = nbModel.bestModel
+# nbBestModel = nbBestPipeline.stages[-1]
+#
+# print("model_type: ", nbBestModel.getModelType())
+# print("smoothing: ", nbBestModel.getOrDefault('smoothing'))
+#
+# for item, acc in zip(nbModel.getEstimatorParamMaps(), nbModel.validationMetrics):
+#     print("the smoothing is: " + str(item.values()[1]) + " while the model_type is: " + str(item.values()[0]) + " and the accuracy is: " + str(acc))
 
 #___________________________________________________________________
 
