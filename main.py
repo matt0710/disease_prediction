@@ -96,7 +96,7 @@ fig, ax = plt.subplots(figsize=(12, 8))
 ax = sns.heatmap(coefficientM, cmap="YlGnBu")
 ax.xaxis.set_ticklabels(feature, rotation=270)
 ax.yaxis.set_ticklabels(vector, rotation=0)
-ax.set_title("Pearson Correlation Matrix")
+ax.set_title("Logistic Regression Feature Importances")
 plt.tight_layout()
 plt.show()
 #___________________________________________________________________________
@@ -139,7 +139,19 @@ for i in range(41):
         theta_normalized[i, j] = math.exp(theta[i, j])
 
 print(theta_normalized[0])
+
+
+vector = [x for x in range(41)]
+
+fig, ax = plt.subplots(figsize=(30, 8))
+ax = sns.heatmap(theta_normalized, cmap="YlGnBu")
+ax.xaxis.set_ticklabels(feature, rotation=270)
+ax.yaxis.set_ticklabels(vector, rotation=0)
+ax.set_title("Theta Matrix Naive Bayes")
+plt.tight_layout()
+plt.show()
 #___________________________________________________________________
+
 
 layers = [130, 50, 25, 41]
 
@@ -190,6 +202,26 @@ print("Decision Tree's measures: \n" + "\taccuracy: " + str(dtAccuracy) + \
 
 print(dt_model.stages[-1].featureImportances.toArray())
 
+dtImportance = dt_model.stages[-1].featureImportances.toArray()
+
+fig, ax = plt.subplots(figsize=(13, 13))
+
+for tick in ax.get_xticklabels():
+    tick.set_fontsize(5)
+for tick in ax.get_yticklabels():
+    tick.set_fontsize(5)
+
+plt.figure(1, [20,8])
+plt.rcParams["font.size"] = 5
+ax.barh(feature, dtImportance)
+ax.set_yticks(feature)
+ax.set_yticklabels(feature)
+ax.invert_yaxis()
+ax.set_xlabel('Importance')
+ax.set_ylabel("Features", fontname="Arial", fontsize=5)
+ax.set_title('Decision Tree Features Importances')
+
+plt.show()
 #__________________________________________________________________________________________________________________
 
 rt = RandomForestClassifier(labelCol="label", featuresCol="features")
@@ -227,3 +259,24 @@ for item, acc in zip(rtModel.getEstimatorParamMaps(), rtModel.validationMetrics)
           "and the seed is: " + str(item.values()[1]) + " and the accuracy is: " + str(acc))
 
 print(rtBestModel.featureImportances.toArray())
+
+rtImportance = rtBestModel.featureImportances.toArray()
+
+fig, ax = plt.subplots(figsize=(13, 13))
+
+for tick in ax.get_xticklabels():
+    tick.set_fontsize(5)
+for tick in ax.get_yticklabels():
+    tick.set_fontsize(5)
+
+plt.figure(1, [20,8])
+plt.rcParams["font.size"] = 5
+ax.barh(feature, rtImportance)
+ax.set_yticks(feature)
+ax.set_yticklabels(feature)
+ax.invert_yaxis()
+ax.set_xlabel('Importance')
+ax.set_ylabel("Features", fontname="Arial", fontsize=5)
+ax.set_title('Random Forest Features Importances')
+
+plt.show()
