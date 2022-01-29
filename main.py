@@ -82,15 +82,23 @@ print(lrBestModel.coefficientMatrix)
 
 lrMatrix = lrBestModel.coefficientMatrix
 
-coefficientM = []
+coefficientM = np.zeros((41, 130))
 
 for i in range(41):
-    coeffientList = []
     for j in range(130):
-        coeffientList.append(lrMatrix[i, j])
-    coefficientM.append(coeffientList)
+        coefficientM[i, j] = lrMatrix[i, j]
 
 print(coefficientM)
+
+vector = [x for x in range(41)]
+
+fig, ax = plt.subplots(figsize=(12, 8))
+ax = sns.heatmap(coefficientM, cmap="YlGnBu")
+ax.xaxis.set_ticklabels(feature, rotation=270)
+ax.yaxis.set_ticklabels(vector, rotation=0)
+ax.set_title("Pearson Correlation Matrix")
+plt.tight_layout()
+plt.show()
 #___________________________________________________________________________
 
 nb = NaiveBayes(modelType="multinomial")
@@ -132,7 +140,6 @@ for i in range(41):
 
 print(theta_normalized[0])
 #___________________________________________________________________
-
 
 layers = [130, 50, 25, 41]
 
@@ -181,6 +188,8 @@ print("Decision Tree's measures: \n" + "\taccuracy: " + str(dtAccuracy) + \
       "\n\tHamming Loss: " + str(dtHammingLoss) + "\n\tPrecision By Label: " + str(dtPrecision) + \
       "\n\tRecall By Label: " + str(dtRecall) + "\n\tLog Loss: " + str(dtLogLoss))
 
+print(dt_model.stages[-1].featureImportances.toArray())
+
 #__________________________________________________________________________________________________________________
 
 rt = RandomForestClassifier(labelCol="label", featuresCol="features")
@@ -216,3 +225,5 @@ for i in rtModel.getEstimatorParamMaps():
 for item, acc in zip(rtModel.getEstimatorParamMaps(), rtModel.validationMetrics):
     print("num_trees is: " + str(item.values()[0]) + " while the max_depth is: " + str(item.values()[2]) + \
           "and the seed is: " + str(item.values()[1]) + " and the accuracy is: " + str(acc))
+
+print(rtBestModel.featureImportances.toArray())
