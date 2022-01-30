@@ -1,4 +1,6 @@
 import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
 from pyspark.ml import Pipeline
 from pyspark.ml.feature import VectorAssembler, VectorIndexer, StringIndexer, OneHotEncoder
 from pyspark.ml.feature import MinMaxScaler
@@ -10,7 +12,6 @@ from pyspark.ml.stat import Correlation
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
-from pyspark.sql.functions import col
 import math
 from utils import *
 
@@ -67,6 +68,30 @@ lrPrediction.show()
 
 lrAccuracy, lrHammingLoss, lrPrecision, lrRecall, lrLogLoss = evaluate_model(evaluator, lrPrediction)
 
+maxIter = []
+regParam = []
+elasticNet = []
+accuracyValue = []
+
+for item, acc in zip(model.getEstimatorParamMaps(), model.validationMetrics):
+    print("the maxIter is: " + str(item.values()[1]) + " while the reg_param is: " + str(item.values()[0]) + \
+          " while the reg_param is: " + str(item.values()[2]) + " and the accuracy is: " + str(acc))
+    maxIter.append(item.values()[1])
+    regParam.append(item.values()[0])
+    elasticNet.append(item.values()[2])
+    accuracyValue.append(acc)
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+x, y, z, c = np.array(maxIter), np.array(regParam), np.array(elasticNet), np.array(accuracyValue)
+
+img = ax.scatter(x,y,z,c=c, cmap=plt.hot())
+fig.colorbar(img)
+plt.legend((x, y, z), ('maxIter', 'regParam', 'elasticNet'))#, loc='upper right')
+ax.set_xlabel('maxIter'), ax.set_ylabel('regParam'), ax.set_zlabel('elasticNet')
+plt.show()
+
+
 print("Logistic Regression's measures: \n" + "\taccuracy: " + str(lrAccuracy) + \
       "\n\tHamming Loss: " + str(lrHammingLoss) + "\n\tPrecision By Label: " + str(lrPrecision) + \
       "\n\tRecall By Label: " + str(lrRecall) + "\n\tLog Loss: " + str(lrLogLoss))
@@ -90,7 +115,7 @@ for i in range(41):
 
 print(coefficientM)
 
-vector = [x for x in range(41)]
+vector = [x for x in lrBestPipeline.stages[0].labels]
 
 fig, ax = plt.subplots(figsize=(12, 8))
 ax = sns.heatmap(coefficientM, cmap="YlGnBu")
@@ -125,8 +150,23 @@ nbBestModel = nbBestPipeline.stages[-1]
 print("model_type: ", nbBestModel.getModelType())
 print("smoothing: ", nbBestModel.getOrDefault('smoothing'))
 
+smoothingvalues = []
+modeltypes = []
+accuracyvalues = []
+
 for item, acc in zip(nbModel.getEstimatorParamMaps(), nbModel.validationMetrics):
-    print("the smoothing is: " + str(item.values()[1]) + " while the model_type is: " + str(item.values()[0]) + " and the accuracy is: " + str(acc))
+    print("the smoothing is: " + str(item.values()[0]) + " while the model_type is: " + str(item.values()[1]) + " and the accuracy is: " + str(acc))
+    smoothingvalues.append(item.values()[0])
+    modeltypes.append(item.values()[1])
+    accuracyvalues.append(acc)
+
+for i in smoothingvalues[1:9:3]:
+    plt.bar(modeltypes, accuracyvalues, orientation='vertical', width=0.4)
+    plt.ylim(top=1, bottom=0.95)
+    plt.ylabel('Accuracy')
+    plt.xlabel('Models')
+    plt.title('Accuracy Values for smoothing = ' + str(i))
+    plt.show()
 
 print(nbBestModel.pi)
 print(nbBestModel.theta)
@@ -141,9 +181,9 @@ for i in range(41):
 print(theta_normalized[0])
 
 
-vector = [x for x in range(41)]
+vector = [x for x in nbBestPipeline.stages[0].labels]
 
-fig, ax = plt.subplots(figsize=(30, 8))
+fig, ax = plt.subplots(figsize=(20, 8))
 ax = sns.heatmap(theta_normalized, cmap="YlGnBu")
 ax.xaxis.set_ticklabels(feature, rotation=270)
 ax.yaxis.set_ticklabels(vector, rotation=0)
@@ -181,9 +221,22 @@ print("maxIter: ", mlpBestModel.getOrDefault('maxIter'))
 print("blockSize: ", mlpBestModel.getOrDefault('blockSize'))
 print("seed: ", mlpBestModel.getOrDefault('seed'))
 
+mlpMax, mlpBlock, mlpSeed, mlpAcc = [], [], [], []
+
 for item, acc in zip(mlpModel.getEstimatorParamMaps(), mlpModel.validationMetrics):
     print("the max_iter is: " + str(item.values()[0]) + " while the block_size is: " + str(item.values()[1]) + \
           " while the seed is: " + str(item.values()[2])  +  " and the accuracy is: " + str(acc))
+    mlpMax.append(item.values()[0]), mlpBlock.append(item.values()[1]), mlpSeed.append(item.values()[2]), mlpAcc.append(acc)
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+x, y, z, c = np.array(mlpMax), np.array(mlpBlock), np.array(mlpSeed), np.array(mlpAcc)
+
+img = ax.scatter(x, y, z, c=c, cmap=plt.hot())
+fig.colorbar(img)
+plt.legend((x, y, z), ('mlpMax', 'mlpBlock', 'seed'))
+ax.set_xlabel('mlpMax'), ax.set_ylabel('mlpBlock'), ax.set_zlabel('seed')
+plt.show()
 
 #____________________________________________________________
 
@@ -206,19 +259,10 @@ dtImportance = dt_model.stages[-1].featureImportances.toArray()
 
 fig, ax = plt.subplots(figsize=(13, 13))
 
-for tick in ax.get_xticklabels():
-    tick.set_fontsize(5)
-for tick in ax.get_yticklabels():
-    tick.set_fontsize(5)
-
-plt.figure(1, [20,8])
-plt.rcParams["font.size"] = 5
-ax.barh(feature, dtImportance)
-ax.set_yticks(feature)
-ax.set_yticklabels(feature)
-ax.invert_yaxis()
-ax.set_xlabel('Importance')
-ax.set_ylabel("Features", fontname="Arial", fontsize=5)
+plt.bar(feature, dtImportance, orientation='vertical', width=0.4)
+plt.ylabel('Importance')
+plt.xlabel('Features')
+plt.xticks(range(dtImportance.shape[0]), feature, rotation=90, fontsize=8)
 ax.set_title('Decision Tree Features Importances')
 
 plt.show()
@@ -254,9 +298,22 @@ print(rtModel.validationMetrics)
 for i in rtModel.getEstimatorParamMaps():
     print(i.values())
 
+numTrees, maxDepth, seed, accList = [], [], [], []
+
 for item, acc in zip(rtModel.getEstimatorParamMaps(), rtModel.validationMetrics):
     print("num_trees is: " + str(item.values()[0]) + " while the max_depth is: " + str(item.values()[2]) + \
           "and the seed is: " + str(item.values()[1]) + " and the accuracy is: " + str(acc))
+    numTrees.append(item.values()[0]), maxDepth.append(item.values()[2]), seed.append(item.values()[1]), accList.append(acc)
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+x, y, z, c = np.array(numTrees), np.array(maxDepth), np.array(seed), np.array(accList)
+
+img = ax.scatter(x, y, z, c=c, cmap=plt.hot())
+fig.colorbar(img)
+plt.legend((x, y, z), ('numTrees', 'maxDepth', 'seed'))#, loc='upper right')
+ax.set_xlabel('numTrees'), ax.set_ylabel('maxDepth'), ax.set_zlabel('seed')
+plt.show()
 
 print(rtBestModel.featureImportances.toArray())
 
@@ -264,19 +321,10 @@ rtImportance = rtBestModel.featureImportances.toArray()
 
 fig, ax = plt.subplots(figsize=(13, 13))
 
-for tick in ax.get_xticklabels():
-    tick.set_fontsize(5)
-for tick in ax.get_yticklabels():
-    tick.set_fontsize(5)
-
-plt.figure(1, [20,8])
-plt.rcParams["font.size"] = 5
-ax.barh(feature, rtImportance)
-ax.set_yticks(feature)
-ax.set_yticklabels(feature)
-ax.invert_yaxis()
-ax.set_xlabel('Importance')
-ax.set_ylabel("Features", fontname="Arial", fontsize=5)
+plt.bar(feature, rtImportance, orientation='vertical', width=0.4)
+plt.ylabel('Importance')
+plt.xlabel('Features')
+plt.xticks(range(rtImportance.shape[0]), feature, rotation=90, fontsize=8)
 ax.set_title('Random Forest Features Importances')
 
 plt.show()
