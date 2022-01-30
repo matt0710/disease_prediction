@@ -1,3 +1,6 @@
+import numpy as np
+from matplotlib import pyplot as plt
+import seaborn as sns
 from pyspark.ml import Pipeline
 from pyspark.ml.feature import VectorAssembler, VectorIndexer, StringIndexer, OneHotEncoder
 from pyspark.ml.feature import MinMaxScaler
@@ -70,4 +73,34 @@ def evaluate_model(evaluator, model):
 
     return accuracy, hammingLoss, precisionByLabel, recallByLabel, logLoss
 
+def three_dim_plot(p1, p2, p3, acc, name1, name2, name3, title):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    x, y, z, c = np.array(p1), np.array(p2), np.array(p3), np.array(acc)
+    img = ax.scatter(x, y, z, c=c)  # , cmap=plt.hot())
+    fig.colorbar(img)
+    plt.legend((x, y, z), (str(name1), str(name2), str(name3)))  # , loc='upper right')
+    ax.set_xlabel(str(name1)), ax.set_ylabel(str(name2)), ax.set_zlabel(str(name3))
+    ax.set_title(str(title))
+    plt.show()
+
+def print_heatmap(matrix, x, y, title, size):
+    fig, ax = plt.subplots(figsize=size)
+    ax = sns.heatmap(matrix, cmap="YlGnBu")
+    ax.xaxis.set_ticklabels(x, rotation=270)
+    ax.yaxis.set_ticklabels(y, rotation=0)
+    ax.set_title(str(title))
+    plt.tight_layout()
+    plt.show()
+
+def trees_feature_importance(feature, importance, title):
+    fig, ax = plt.subplots(figsize=(13, 13))
+
+    plt.bar(feature, importance, orientation='vertical', width=0.4)
+    plt.ylabel('Importance')
+    plt.xlabel('Features')
+    plt.xticks(range(importance.shape[0]), feature, rotation=90, fontsize=8)
+    ax.set_title(str(title))
+
+    plt.show()
 

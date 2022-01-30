@@ -34,17 +34,9 @@ assembler2 = VectorAssembler(inputCols=feature, outputCol='features')
 train = assembler2.transform(trainingData)
 
 matrix = Correlation.corr(train.select('features'), 'features')
-matrix_np = matrix.collect()[0]["pearson({})".format('features')].values
+matrix_np = matrix.collect()[0]["pearson({})".format('features')].values.reshape(len(feature), len(feature))
 
-matrix_np = matrix_np.reshape(len(feature), len(feature))
-
-fig, ax = plt.subplots(figsize=(12, 8))
-ax = sns.heatmap(matrix_np, cmap="YlGnBu")
-ax.xaxis.set_ticklabels(feature, rotation=270)
-ax.yaxis.set_ticklabels(feature, rotation=0)
-ax.set_title("Pearson Correlation Matrix")
-plt.tight_layout()
-plt.show()
+print_heatmap(matrix_np, feature, feature, "Pearson Correlation Matrix", (12, 8))
 
 #________________________________________________________
 
@@ -68,28 +60,17 @@ lrPrediction.show()
 
 lrAccuracy, lrHammingLoss, lrPrecision, lrRecall, lrLogLoss = evaluate_model(evaluator, lrPrediction)
 
-maxIter = []
-regParam = []
-elasticNet = []
-accuracyValue = []
+maxIter, regParam, elasticNet, accuracyValue= [], [], [], []
 
 for item, acc in zip(model.getEstimatorParamMaps(), model.validationMetrics):
     print("the maxIter is: " + str(item.values()[1]) + " while the reg_param is: " + str(item.values()[0]) + \
           " while the reg_param is: " + str(item.values()[2]) + " and the accuracy is: " + str(acc))
-    maxIter.append(item.values()[1])
-    regParam.append(item.values()[0])
-    elasticNet.append(item.values()[2])
+    maxIter.append(item.values()[1]), regParam.append(item.values()[0]), elasticNet.append(item.values()[2])
     accuracyValue.append(acc)
 
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-x, y, z, c = np.array(maxIter), np.array(regParam), np.array(elasticNet), np.array(accuracyValue)
 
-img = ax.scatter(x,y,z,c=c, cmap=plt.hot())
-fig.colorbar(img)
-plt.legend((x, y, z), ('maxIter', 'regParam', 'elasticNet'))#, loc='upper right')
-ax.set_xlabel('maxIter'), ax.set_ylabel('regParam'), ax.set_zlabel('elasticNet')
-plt.show()
+three_dim_plot(maxIter, regParam, elasticNet, accuracyValue, "maxIter", "regParam", "elasticNet", \
+               "Logistic Regression training results")
 
 
 print("Logistic Regression's measures: \n" + "\taccuracy: " + str(lrAccuracy) + \
@@ -106,24 +87,15 @@ print("elasticNetParam: ", lrBestModel.getOrDefault('elasticNetParam'))
 print(lrBestModel.coefficientMatrix)
 
 lrMatrix = lrBestModel.coefficientMatrix
-
 coefficientM = np.zeros((41, 130))
-
 for i in range(41):
     for j in range(130):
         coefficientM[i, j] = lrMatrix[i, j]
 
-print(coefficientM)
-
 vector = [x for x in lrBestPipeline.stages[0].labels]
 
-fig, ax = plt.subplots(figsize=(12, 8))
-ax = sns.heatmap(coefficientM, cmap="YlGnBu")
-ax.xaxis.set_ticklabels(feature, rotation=270)
-ax.yaxis.set_ticklabels(vector, rotation=0)
-ax.set_title("Logistic Regression Feature Importances")
-plt.tight_layout()
-plt.show()
+print_heatmap(coefficientM, feature, vector, "Logistic Regression Feature Importances", (12, 8))
+
 #___________________________________________________________________________
 
 nb = NaiveBayes(modelType="multinomial")
@@ -150,9 +122,7 @@ nbBestModel = nbBestPipeline.stages[-1]
 print("model_type: ", nbBestModel.getModelType())
 print("smoothing: ", nbBestModel.getOrDefault('smoothing'))
 
-smoothingvalues = []
-modeltypes = []
-accuracyvalues = []
+smoothingvalues, modeltypes, accuracyvalues = [], [], []
 
 for item, acc in zip(nbModel.getEstimatorParamMaps(), nbModel.validationMetrics):
     print("the smoothing is: " + str(item.values()[0]) + " while the model_type is: " + str(item.values()[1]) + " and the accuracy is: " + str(acc))
@@ -178,18 +148,9 @@ for i in range(41):
     for j in range(130):
         theta_normalized[i, j] = math.exp(theta[i, j])
 
-print(theta_normalized[0])
-
-
 vector = [x for x in nbBestPipeline.stages[0].labels]
 
-fig, ax = plt.subplots(figsize=(20, 8))
-ax = sns.heatmap(theta_normalized, cmap="YlGnBu")
-ax.xaxis.set_ticklabels(feature, rotation=270)
-ax.yaxis.set_ticklabels(vector, rotation=0)
-ax.set_title("Theta Matrix Naive Bayes")
-plt.tight_layout()
-plt.show()
+print_heatmap(theta_normalized, feature, vector, "Theta Matrix Naive Bayes", (20, 8))
 #___________________________________________________________________
 
 
@@ -213,7 +174,6 @@ print("MLP's measures: \n" + "\taccuracy: " + str(mlpAccuracy) + \
       "\n\tHamming Loss: " + str(mlpHammingLoss) + "\n\tPrecision By Label: " + str(mlpPrecision) + \
       "\n\tRecall By Label: " + str(mlpRecall) + "\n\tLog Loss: " + str(mlpLogLoss))
 
-
 mlpBestPipeline = mlpModel.bestModel
 mlpBestModel = mlpBestPipeline.stages[-1]
 
@@ -224,19 +184,11 @@ print("seed: ", mlpBestModel.getOrDefault('seed'))
 mlpMax, mlpBlock, mlpSeed, mlpAcc = [], [], [], []
 
 for item, acc in zip(mlpModel.getEstimatorParamMaps(), mlpModel.validationMetrics):
-    print("the max_iter is: " + str(item.values()[0]) + " while the block_size is: " + str(item.values()[1]) + \
-          " while the seed is: " + str(item.values()[2])  +  " and the accuracy is: " + str(acc))
-    mlpMax.append(item.values()[0]), mlpBlock.append(item.values()[1]), mlpSeed.append(item.values()[2]), mlpAcc.append(acc)
+    print("the max_iter is: " + str(item.values()[2]) + " while the block_size is: " + str(item.values()[0]) + \
+          " while the seed is: " + str(item.values()[1])  +  " and the accuracy is: " + str(acc))
+    mlpMax.append(item.values()[2]), mlpBlock.append(item.values()[0]), mlpSeed.append(item.values()[1]), mlpAcc.append(acc)
 
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-x, y, z, c = np.array(mlpMax), np.array(mlpBlock), np.array(mlpSeed), np.array(mlpAcc)
-
-img = ax.scatter(x, y, z, c=c, cmap=plt.hot())
-fig.colorbar(img)
-plt.legend((x, y, z), ('mlpMax', 'mlpBlock', 'seed'))
-ax.set_xlabel('mlpMax'), ax.set_ylabel('mlpBlock'), ax.set_zlabel('seed')
-plt.show()
+three_dim_plot(mlpMax, mlpBlock, mlpSeed, mlpAcc, "max_iter", "block_size", "seed", "MLP training results")
 
 #____________________________________________________________
 
@@ -253,19 +205,10 @@ print("Decision Tree's measures: \n" + "\taccuracy: " + str(dtAccuracy) + \
       "\n\tHamming Loss: " + str(dtHammingLoss) + "\n\tPrecision By Label: " + str(dtPrecision) + \
       "\n\tRecall By Label: " + str(dtRecall) + "\n\tLog Loss: " + str(dtLogLoss))
 
-print(dt_model.stages[-1].featureImportances.toArray())
-
 dtImportance = dt_model.stages[-1].featureImportances.toArray()
 
-fig, ax = plt.subplots(figsize=(13, 13))
+trees_feature_importance(feature, dtImportance, 'Decision Tree Features Importances')
 
-plt.bar(feature, dtImportance, orientation='vertical', width=0.4)
-plt.ylabel('Importance')
-plt.xlabel('Features')
-plt.xticks(range(dtImportance.shape[0]), feature, rotation=90, fontsize=8)
-ax.set_title('Decision Tree Features Importances')
-
-plt.show()
 #__________________________________________________________________________________________________________________
 
 rt = RandomForestClassifier(labelCol="label", featuresCol="features")
@@ -301,30 +244,32 @@ for i in rtModel.getEstimatorParamMaps():
 numTrees, maxDepth, seed, accList = [], [], [], []
 
 for item, acc in zip(rtModel.getEstimatorParamMaps(), rtModel.validationMetrics):
-    print("num_trees is: " + str(item.values()[0]) + " while the max_depth is: " + str(item.values()[2]) + \
-          "and the seed is: " + str(item.values()[1]) + " and the accuracy is: " + str(acc))
-    numTrees.append(item.values()[0]), maxDepth.append(item.values()[2]), seed.append(item.values()[1]), accList.append(acc)
+    print("num_trees is: " + str(item.values()[0]) + " while the max_depth is: " + str(item.values()[1]) + \
+          "and the seed is: " + str(item.values()[2]) + " and the accuracy is: " + str(acc))
+    numTrees.append(item.values()[0]), maxDepth.append(item.values()[1]), seed.append(item.values()[2]), accList.append(acc)
 
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-x, y, z, c = np.array(numTrees), np.array(maxDepth), np.array(seed), np.array(accList)
+three_dim_plot(numTrees, maxDepth, seed, accList, "numTrees", "maxDepth", "seed", "Random Forest training results")
 
-img = ax.scatter(x, y, z, c=c, cmap=plt.hot())
-fig.colorbar(img)
-plt.legend((x, y, z), ('numTrees', 'maxDepth', 'seed'))#, loc='upper right')
-ax.set_xlabel('numTrees'), ax.set_ylabel('maxDepth'), ax.set_zlabel('seed')
-plt.show()
-
-print(rtBestModel.featureImportances.toArray())
+# fig = plt.figure()
+# ax = fig.add_subplot(111, projection='3d')
+# x, y, z, c = np.array(numTrees), np.array(maxDepth), np.array(seed), np.array(accList)
+#
+# img = ax.scatter(x, y, z, c=c, cmap=plt.hot())
+# fig.colorbar(img)
+# plt.legend((x, y, z), ('numTrees', 'maxDepth', 'seed'))#, loc='upper right')
+# ax.set_xlabel('numTrees'), ax.set_ylabel('maxDepth'), ax.set_zlabel('seed')
+# plt.show()
 
 rtImportance = rtBestModel.featureImportances.toArray()
 
-fig, ax = plt.subplots(figsize=(13, 13))
+trees_feature_importance(feature, rtImportance, 'Random Forest Features Importances')
 
-plt.bar(feature, rtImportance, orientation='vertical', width=0.4)
-plt.ylabel('Importance')
-plt.xlabel('Features')
-plt.xticks(range(rtImportance.shape[0]), feature, rotation=90, fontsize=8)
-ax.set_title('Random Forest Features Importances')
-
-plt.show()
+# fig, ax = plt.subplots(figsize=(13, 13))
+#
+# plt.bar(feature, rtImportance, orientation='vertical', width=0.4)
+# plt.ylabel('Importance')
+# plt.xlabel('Features')
+# plt.xticks(range(rtImportance.shape[0]), feature, rotation=90, fontsize=8)
+# ax.set_title('Random Forest Features Importances')
+#
+# plt.show()
