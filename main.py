@@ -64,7 +64,7 @@ maxIter, regParam, elasticNet, accuracyValue= [], [], [], []
 
 for item, acc in zip(model.getEstimatorParamMaps(), model.validationMetrics):
     print("the maxIter is: " + str(item.values()[1]) + " while the reg_param is: " + str(item.values()[0]) + \
-          " while the reg_param is: " + str(item.values()[2]) + " and the accuracy is: " + str(acc))
+          " while the elastic_net_param is: " + str(item.values()[2]) + " and the accuracy is: " + str(acc))
     maxIter.append(item.values()[1]), regParam.append(item.values()[0]), elasticNet.append(item.values()[2])
     accuracyValue.append(acc)
 
@@ -96,7 +96,7 @@ vector = [x for x in lrBestPipeline.stages[0].labels]
 
 print_heatmap(coefficientM, feature, vector, "Logistic Regression Feature Importances", (12, 8))
 
-#___________________________________________________________________________
+#_____________________________________________________________________________________________________
 
 nb = NaiveBayes(modelType="multinomial")
 
@@ -151,8 +151,7 @@ for i in range(41):
 vector = [x for x in nbBestPipeline.stages[0].labels]
 
 print_heatmap(theta_normalized, feature, vector, "Theta Matrix Naive Bayes", (20, 8))
-#___________________________________________________________________
-
+#_______________________________________________________________________________________________________________
 
 layers = [130, 50, 25, 41]
 
@@ -185,12 +184,12 @@ mlpMax, mlpBlock, mlpSeed, mlpAcc = [], [], [], []
 
 for item, acc in zip(mlpModel.getEstimatorParamMaps(), mlpModel.validationMetrics):
     print("the max_iter is: " + str(item.values()[2]) + " while the block_size is: " + str(item.values()[0]) + \
-          " while the seed is: " + str(item.values()[1])  +  " and the accuracy is: " + str(acc))
+          " while the seed is: " + str(item.values()[1]) + " and the accuracy is: " + str(acc))
     mlpMax.append(item.values()[2]), mlpBlock.append(item.values()[0]), mlpSeed.append(item.values()[1]), mlpAcc.append(acc)
 
 three_dim_plot(mlpMax, mlpBlock, mlpSeed, mlpAcc, "max_iter", "block_size", "seed", "MLP training results")
 
-#____________________________________________________________
+#_________________________________________________________________________________________________
 
 dt = DecisionTreeClassifier(labelCol="label", featuresCol="features")
 dtPipeline = Pipeline(stages=[stringIndexer, assembler, features_scaler, featureIndexer, dt])
@@ -245,31 +244,11 @@ numTrees, maxDepth, seed, accList = [], [], [], []
 
 for item, acc in zip(rtModel.getEstimatorParamMaps(), rtModel.validationMetrics):
     print("num_trees is: " + str(item.values()[0]) + " while the max_depth is: " + str(item.values()[1]) + \
-          "and the seed is: " + str(item.values()[2]) + " and the accuracy is: " + str(acc))
+          " and the seed is: " + str(item.values()[2]) + " and the accuracy is: " + str(acc))
     numTrees.append(item.values()[0]), maxDepth.append(item.values()[1]), seed.append(item.values()[2]), accList.append(acc)
 
 three_dim_plot(numTrees, maxDepth, seed, accList, "numTrees", "maxDepth", "seed", "Random Forest training results")
 
-# fig = plt.figure()
-# ax = fig.add_subplot(111, projection='3d')
-# x, y, z, c = np.array(numTrees), np.array(maxDepth), np.array(seed), np.array(accList)
-#
-# img = ax.scatter(x, y, z, c=c, cmap=plt.hot())
-# fig.colorbar(img)
-# plt.legend((x, y, z), ('numTrees', 'maxDepth', 'seed'))#, loc='upper right')
-# ax.set_xlabel('numTrees'), ax.set_ylabel('maxDepth'), ax.set_zlabel('seed')
-# plt.show()
-
 rtImportance = rtBestModel.featureImportances.toArray()
 
 trees_feature_importance(feature, rtImportance, 'Random Forest Features Importances')
-
-# fig, ax = plt.subplots(figsize=(13, 13))
-#
-# plt.bar(feature, rtImportance, orientation='vertical', width=0.4)
-# plt.ylabel('Importance')
-# plt.xlabel('Features')
-# plt.xticks(range(rtImportance.shape[0]), feature, rotation=90, fontsize=8)
-# ax.set_title('Random Forest Features Importances')
-#
-# plt.show()
